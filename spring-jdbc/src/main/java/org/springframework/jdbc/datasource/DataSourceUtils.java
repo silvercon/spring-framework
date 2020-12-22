@@ -111,9 +111,12 @@ public abstract class DataSourceUtils {
 		}
 		// Else we either got no holder or an empty thread-bound holder here.
 
+		//这里正式创建一个Connection
 		logger.debug("Fetching JDBC Connection from DataSource");
 		Connection con = fetchConnection(dataSource);
 
+		//事务必须要在同一个Connection下才生效
+		//如果开启了事务，则将当Thread和Connection绑定
 		if (TransactionSynchronizationManager.isSynchronizationActive()) {
 			logger.debug("Registering transaction synchronization for JDBC Connection");
 			// Use same Connection for further JDBC actions within the transaction.
@@ -283,10 +286,14 @@ public abstract class DataSourceUtils {
 		if (dataSource != null) {
 			holder = (ConnectionHolder) TransactionSynchronizationManager.getResource(dataSource);
 		}
+
+		//优先级：自定义超时时间 > 事务超时时间
+		//如果存在事务，并且事务设置了超时时间，则应用事务的超时时间
 		if (holder != null && holder.hasTimeout()) {
 			// Remaining transaction timeout overrides specified value.
 			stmt.setQueryTimeout(holder.getTimeToLiveInSeconds());
 		}
+
 		else if (timeout >= 0) {
 			// No current transaction timeout -> apply specified value.
 			stmt.setQueryTimeout(timeout);
